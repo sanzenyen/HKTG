@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ハングルキーボードタイプゲーム</title>
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            text-align: center;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f0f2f5;
+            color: #333;
+        }
+        h1 {
+            margin-top: 20px;
+            font-size: 2.5em;
+            color: #4a90e2;
+        }
+        #target {
+            font-size: 5em;
+            margin-bottom: 20px;
+            font-weight: bold;
+            color: #333;
+        }
+        #romanization {
+            font-size: 2em;
+            margin-bottom: 20px;
+            color: #555;
+            font-style: italic;
+        }
+        #input {
+            font-size: 1.5em;
+            padding: 10px;
+            width: 80%;
+            max-width: 400px;
+            border: 2px solid #4a90e2;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        #message {
+            margin-top: 20px;
+            font-size: 1.2em;
+            height: 1.5em;
+        }
+        #log, #scorelog {
+            margin-top: 20px;
+            font-size: 1em;
+            text-align: left;
+            max-width: 300px;
+            width: 80%;
+            border: 1px solid #ccc;
+            padding: 10px;
+            background-color: #fff;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        #timer, #score {
+            font-size: 1.5em;
+            margin-top: 20px;
+        }
+        #startButton {
+            font-size: 1.5em;
+            padding: 10px 20px;
+            margin-top: 20px;
+            cursor: pointer;
+            background-color: #4a90e2;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        #startButton:hover {
+            background-color: #357ab8;
+        }
+        .container {
+            text-align: center;
+            margin-top: 20px;
+        }
+        .image {
+            width: 100%;
+            height: auto;
+        }
+        @media (min-width: 600px) {
+            body {
+                margin: 50px;
+            }
+            #input {
+                width: 50%;
+            }
+            #log, #scorelog {
+                width: 50%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>ハングルキーボードタイプゲーム</h1>
+    <div id="target">❓️</div>
+    <div id="romanization">🔤</div>
+    <input type="text" id="input" placeholder="ここに回答を入力" autofocus>
+    <div id="message"></div>
+    <button id="startButton">スタート</button>
+    <div id="timer">残り時間: 60秒</div>
+    <div id="score">スコア: 0</div>
+    <div class="container">
+        <div class="image">
+            <img src="keyboard.jpg" alt="Keyboard Image">
+        </div>
+    </div>
+    <div id="scorelog">過去のハイスコア</div>
+    <div id="log">解答記録</div>
+
+    <script>
+        const vowels = ['ㅏ', 'ㅑ', 'ㅓ', 'ㅕ', 'ㅗ', 'ㅛ', 'ㅜ', 'ㅠ', 'ㅡ', 'ㅣ'];
+        const consonants = ['ㄱ', 'ㄴ', 'ㄷ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅅ', 'ㅇ', 'ㅈ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ'];
+        const characters = vowels.concat(consonants);
+
+        const romanizationMap = {
+            'ㅏ': 'a', 'ㅑ': 'ya', 'ㅓ': 'eo', 'ㅕ': 'yeo', 'ㅗ': 'o', 'ㅛ': 'yo', 'ㅜ': 'u', 'ㅠ': 'yu', 'ㅡ': 'eu', 'ㅣ': 'i',
+            'ㄱ': 'g', 'ㄴ': 'n', 'ㄷ': 'd', 'ㄹ': 'r', 'ㅁ': 'm', 'ㅂ': 'b', 'ㅅ': 's', 'ㅇ': 'ng', 'ㅈ': 'j', 'ㅊ': 'ch', 'ㅋ': 'k', 'ㅌ': 't', 'ㅍ': 'p', 'ㅎ': 'h'
+        };
+
+        const keyboardMap = {
+            'ㅏ': 'k', 'ㅑ': 'i', 'ㅓ': 'j', 'ㅕ': 'u', 'ㅗ': 'h', 'ㅛ': 'y', 'ㅜ': 'n', 'ㅠ': 'b', 'ㅡ': 'm', 'ㅣ': 'l',
+            'ㄱ': 'r', 'ㄴ': 's', 'ㄷ': 'e', 'ㄹ': 'f', 'ㅁ': 'a', 'ㅂ': 'q', 'ㅅ': 't', 'ㅇ': 'd', 'ㅈ': 'w', 'ㅊ': 'c', 'ㅋ': 'z', 'ㅌ': 'x', 'ㅍ': 'v', 'ㅎ': 'g'
+        };
+
+        const targetElement = document.getElementById('target');
+        const romanizationElement = document.getElementById('romanization');
+        const inputElement = document.getElementById('input');
+        const messageElement = document.getElementById('message');
+        const logElement = document.getElementById('log');
+        const timerElement = document.getElementById('timer');
+        const scoreElement = document.getElementById('score');
+        const startButton = document.getElementById('startButton');
+        const scoreLogElement = document.getElementById('scorelog');
+
+        let log = [];
+        let score = 0;
+        let timeLeft = 60;
+        let timerInterval;
+        let totalQuestions = 0;
+
+        function getRandomCharacter() {
+            const randomIndex = Math.floor(Math.random() * characters.length);
+            return characters[randomIndex];
+        }
+
+        function speakCharacter(character) {
+            const utterance = new SpeechSynthesisUtterance(character);
+            utterance.lang = 'ko-KR';
+            window.speechSynthesis.speak(utterance);
+        }
+
+        function setNewTarget() {
+            const newCharacter = getRandomCharacter();
+            targetElement.textContent = newCharacter;
+            romanizationElement.textContent = romanizationMap[newCharacter];
+            inputElement.value = '';
+            messageElement.textContent = '';
+            speakCharacter(newCharacter);
+        }
+
+        function updateLog(isCorrect, userInput) {
+            const currentCharacter = targetElement.textContent;
+            log.push({ character: currentCharacter, correct: isCorrect, userInput: userInput });
+            displayLog();
+        }
+
+        function displayLog() {
+            logElement.innerHTML = log.map((entry, index) => {
+                if (entry.character === 'ゲーム終了') {
+                    return `<div>${entry.character}: スコア ${entry.userInput}</div>`;
+                } else if (entry.correct) {
+                    return `<div>${index + 1}. ${entry.character} (${romanizationMap[entry.character]}): ✅ 正解！🎉</div>`;
+                } else {
+                    return `<div>${index + 1}. ${entry.character} (${romanizationMap[entry.character]}): ❌ 不正解 😢 (入力: ${entry.userInput})</div>`;
+                }
+            }).join('');
+        }
+
+        function startTimer() {
+            clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                timerElement.textContent = `残り時間: ${timeLeft}秒`;
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    endGame();
+                }
+            }, 1000);
+        }
+
+        function endGame() {
+            inputElement.disabled = true;
+            messageElement.textContent = `ゲーム終了！あなたのスコアは ${score}/${totalQuestions} です。`;
+            messageElement.style.color = 'blue';
+            log.push({ character: 'ゲーム終了', correct: null, userInput: `${score}/${totalQuestions}` });
+            displayLog();
+            displayScoreLog();
+        }
+
+        function displayScoreLog() {
+            scoreLogElement.innerHTML = log
+                .filter(entry => entry.character === 'ゲーム終了')
+                .map((entry, index) => `<div>${index + 1}. ${entry.character}: スコア ${entry.userInput}</div>`)
+                .join('');
+        }
+
+        function updateScore() {
+            scoreElement.textContent = `スコア: ${score}/${totalQuestions}`;
+        }
+
+        inputElement.addEventListener('input', () => {
+            const userInput = inputElement.value.toLowerCase();
+            const currentCharacter = targetElement.textContent;
+            if (userInput.length === 1 && keyboardMap[currentCharacter] === userInput) {
+                messageElement.textContent = '✅ 正解！🎉';
+                messageElement.style.color = 'green';
+                updateLog(true, userInput);
+                score++;
+                totalQuestions++;
+                setTimeout(() => {
+                    setNewTarget();
+                    updateScore();
+                }, 1000);
+            } else if (userInput.length === 1) {
+                messageElement.textContent = '❌ もう一度試してください。😢';
+                messageElement.style.color = 'red';
+                updateLog(false, userInput);
+                totalQuestions++;
+                updateScore();
+            }
+            inputElement.value = '';
+        });
+
+        startButton.addEventListener('click', startGame);
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' && inputElement.disabled) {
+                startGame();
+            }
+        });
+
+        function startGame() {
+            score = 0;
+            totalQuestions = 0;
+            timeLeft = 60;
+            inputElement.disabled = false;
+            inputElement.value = '';
+            scoreElement.textContent = `スコア: ${score}/${totalQuestions}`;
+            timerElement.textContent = `残り時間: ${timeLeft}秒`;
+            messageElement.textContent = '';
+            startTimer();
+            setNewTarget();
+            inputElement.focus();
+        }
+
+        inputElement.value = '';
+    </script>
+</body>
+</html>
